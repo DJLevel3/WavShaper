@@ -52,8 +52,8 @@ The Enable switch turns on shaping. If it's off, the audio goes right through an
 
 ## What libraries and stuff does it use?
 
-WavShaper uses [iPlug2](https://github.com/iPlug2/iPlug2) for the UI and VST3 plugin framework.
-WavShaper uses [AudioFile](https://github.com/adamstark/AudioFile) to open and read .wav files.
+- WavShaper uses [iPlug2](https://github.com/iPlug2/iPlug2) for the UI and VST3 plugin framework.
+- WavShaper uses [AudioFile](https://github.com/adamstark/AudioFile) to open and read .wav files.
 
 ## Who developed WavShaper?
 - Me, DJ_Level_3!
