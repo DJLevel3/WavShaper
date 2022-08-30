@@ -6,8 +6,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
-#include <queue>
-#include <vector>
 
 const static int MAX_SHAPE_SAMPLES = 4800; // Samples in 1 period (4800 = 20Hz @ 96k or 10Hz @ 48k)
 const static double HALF_SHAPE_SAMPLES = MAX_SHAPE_SAMPLES / 2;
