@@ -11,6 +11,8 @@ WavShaper::WavShaper(const InstanceInfo& info)
     GetParam(kFade)->InitDouble("Shaping", 100., 0., 100.0, 0.01, "%");
     GetParam(kOffset)->InitDouble("Offset", 0., -1., 1.0, 0.01, "");
 
+    loadShape();
+
 #if IPLUG_EDITOR // http://bit.ly/2S64BDd
     mMakeGraphicsFunc = [&]() { return MakeGraphics(*this, PLUG_WIDTH, PLUG_HEIGHT, PLUG_FPS, GetScaleForScreen(PLUG_WIDTH, PLUG_HEIGHT)); };
 
@@ -77,14 +79,23 @@ void WavShaper::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
     for (int s = 0; s < nFrames; s++)
     {
         sample samp = offset + (inputs[0][s] + inputs[1][s]) * gainI / 2;
+        if (samp == last)
+        {
+            multiplier = (multiplier > 0) ? (multiplier - 0.0006) : 0;
+        }
+        else
+        {
+            multiplier = (multiplier < 1) ? (multiplier + 0.002) : 1;
+            last = samp;
+        }
         while (samp >= 1)
             samp -= 2.;
         while (samp < -1)
             samp += 2.;
         samp = samp / 1.00001;
-        sample sampL = doShaping(samp, true);
+        sample sampL = doShaping(samp, true) * multiplier;
         sampL = lerp<sample>(inputs[0][s], sampL, fade);
-        sample sampR = doShaping(samp, false);
+        sample sampR = doShaping(samp, false) * multiplier;
         sampR = lerp<sample>(inputs[1][s], sampR, fade);
         outputs[0][s] = on ? (sampL * gainO) : inputs[0][s];
         outputs[1][s] = on ? (sampR * gainO) : inputs[1][s];

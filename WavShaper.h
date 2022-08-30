@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <queue>
+#include <vector>
 
 const static int MAX_SHAPE_SAMPLES = 4800; // Samples in 1 period (4800 = 20Hz @ 96k or 10Hz @ 48k)
 const static double HALF_SHAPE_SAMPLES = MAX_SHAPE_SAMPLES / 2;
@@ -31,7 +33,7 @@ struct shapeTarget
 {
     float samplesL[MAX_SHAPE_SAMPLES] = {0.};
     float samplesR[MAX_SHAPE_SAMPLES] = {0.};
-    std::string name;
+    std::string name = "__init__";
 };
 
 template <class type>
@@ -56,10 +58,14 @@ class WavShaper final : public Plugin
     void ProcessBlock(sample** inputs, sample** outputs, int nFrames) override;
 #endif
   private:
+    double multiplier = 0.0;
+    sample last;
     shapeTarget tgt;
     sample doShaping(sample in, bool left);
     short int findInSampleSet(sample in);
     void updateUI();
     void loadShape();
     void copyToPluginDir(fs::path src);
+    bool checkBuffer(sample buffer[512]);
+    void checkSilence();
 };
