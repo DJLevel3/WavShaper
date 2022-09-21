@@ -14,7 +14,7 @@ This is huge. It's not exactly like the original signal, there's some distortion
 
 Now, imagine that instead of a circle, you have something more complicated, such as the character 'h'. What happens when you put the audio signal as the point on the 'h' to send to the speakers? That's right, you get a signal that sounds a lot like the original, but looks like the 'h'! This can be extended to just about anything you can think of, with the caveat that a more complicated shape makes the output noisier and less intelligible.
 
-Interestingly, if you fade bewteen the unshaped and the shaped audio, you get the unshaped audio to morph into the shaped audio! Neat, huh?
+Interestingly, if you fade bewteen the unshaped and the shaped audio, you get the unshaped audio to morph into the shaped audio! Neat, huh? Here's a [video](https://www.youtube.com/watch?v=EuD2Tdh7Ri0) of the plugin in action!
 
 ## Well, it's probably super complicated and expensive to compute, right?
 
@@ -49,6 +49,12 @@ The Input Gain knob changes the volume of the input signal into the shape, and t
 The Shaping knob fades between the unshaped and the shaped signals as explained above, and the Offset knob shifts the input audio around the shape.
 
 The Enable switch turns on shaping. If it's off, the audio goes right through and is only affected by the input gain. If it's on, everything affects the audio.
+
+## But, how do I use it with my own shapes?
+That's pretty simple, too. All you need is a .wav file that's 4800 samples long or more. WavShaper uses the first 4800 samples to make the shape. To get a good .wav file with exactly one shape, I recommend using [osci-render](https://github.com/jameshball/osci-render) and creating a short recording with one of the settings below:
+- Sample rate 48000, Frequency 10Hz
+- Sample rate 96000, Frequency 20Hz
+- Sample rate 192000, Frequency 40Hz
 
 ## What libraries and stuff does it use?
 
