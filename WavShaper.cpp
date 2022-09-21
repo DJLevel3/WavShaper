@@ -5,11 +5,15 @@
 WavShaper::WavShaper(const InstanceInfo& info)
   : Plugin(info, MakeConfig(kNumParams, kNumPresets))
 {
-    GetParam(kGainI)->InitDouble("Input Gain", 100., 0., 200.0, 0.02, "%");
-    GetParam(kGainO)->InitDouble("Output Gain", 100., 0., 200.0, 0.02, "%");
+    GetParam(kGainI)->InitDouble("In Gain", 100., 0., 200.0, 0.02, "%");
+    GetParam(kGainO)->InitDouble("Out Gain", 100., 0., 200.0, 0.02, "%");
     GetParam(kEnable)->InitBool("Enable", false, "Enable", 0, "", " ", " ");
     GetParam(kFade)->InitDouble("Shaping", 100., 0., 100.0, 0.01, "%");
     GetParam(kOffset)->InitDouble("Offset", 0., -1., 1.0, 0.01, "");
+    GetParam(kRotation)->InitDouble("Rotation", 0., -180., 180.0, 0.01, "deg");
+    GetParam(kOptimize)->InitBool("Optimize", false, "Optimize", 0, "", "No", "Yes");
+    GetParam(kCenter)->InitBool("Center", false, "Center", 0, "", " ", " ");
+    GetParam(kBank)->InitInt("Bank", 0, 0, 512, "Bank");
 
     loadShape();
 
@@ -18,34 +22,27 @@ WavShaper::WavShaper(const InstanceInfo& info)
 
     mLayoutFunc = [&](IGraphics* pGraphics) {
         pGraphics->AttachCornerResizer(EUIResizerMode::Scale, false);
-        pGraphics->AttachPanelBackground(COLOR_GRAY);
+        pGraphics->AttachPanelBackground(IColor(255, 201, 185, 162));
         pGraphics->LoadFont("Hack-Regular", HACK_FN);
         pGraphics->LoadFont("Roboto-Regular", ROBOTO_FN);
+        IBitmap logo = pGraphics->LoadBitmap(WS_LOGO_FN);
 
         const IVStyle style{
-          true, // Show label
-          true, // Show value
-          {
-            DEFAULT_BGCOLOR,          // Background
-            DEFAULT_FGCOLOR,          // Foreground
-            DEFAULT_PRCOLOR,          // Pressed
-            COLOR_BLACK,              // Frame
-            DEFAULT_HLCOLOR,          // Highlight
-            DEFAULT_SHCOLOR,          // Shadow
-            COLOR_BLACK,              // Extra 1
-            DEFAULT_X2COLOR,          // Extra 2
-            DEFAULT_X3COLOR           // Extra 3
-          },                          // Colors
-          IText(12.f, "Hack-Regular") // Label text
+            true, // Show label
+            true, // Show value
+            {
+                DEFAULT_BGCOLOR, // Background
+                DEFAULT_FGCOLOR,               // Foreground
+                DEFAULT_PRCOLOR,          // Pressed
+                COLOR_BLACK,              // Frame
+                DEFAULT_HLCOLOR,          // Highlight
+                DEFAULT_SHCOLOR,          // Shadow
+                COLOR_BLACK,              // Extra 1
+                DEFAULT_X2COLOR,          // Extra 2
+                DEFAULT_X3COLOR           // Extra 3
+            },                          // Colors
+            IText(12.f, "Hack-Regular") // Label text
         };
-
-        const IRECT b = pGraphics->GetBounds();
-        pGraphics->AttachControl(new ITextControl(b.GetMidVPadded(50), "WavShaper", IText(50)));
-        pGraphics->AttachControl(new IVKnobControl(b.GetCentredInside(120, 100).GetVShifted(-200).GetHShifted(-80), kGainI));
-        pGraphics->AttachControl(new IVKnobControl(b.GetCentredInside(120, 100).GetVShifted(-200).GetHShifted(80), kGainO));
-        pGraphics->AttachControl(new IVKnobControl(b.GetCentredInside(100).GetVShifted(200).GetHShifted(-80), kFade));
-        pGraphics->AttachControl(new IVKnobControl(b.GetCentredInside(100).GetVShifted(200).GetHShifted(80), kOffset));
-        pGraphics->AttachControl(new IVSlideSwitchControl(b.GetCentredInside(70, 50).GetVShifted(-100), kEnable));
 
         auto promptFunction = [this, pGraphics](IControl* pCaller) {
             WDL_String fileName;
@@ -59,8 +56,23 @@ WavShaper::WavShaper(const InstanceInfo& info)
                 loadShape(fileName.Get());
             }
         };
+        auto bankchange = [this](IControl* pCaller) {
+            lastBank = (GetParam(kBank)->Value() < targets.nBanks) ? (GetParam(kBank)->Value()) : (targets.nBanks - 1);
+            loadShape(lastBank, false);
+        };
+        auto reload = [this](IControl* pCaller) { loadShape(lastBank,true); };
 
-        pGraphics->AttachControl(new IVButtonControl(b.GetCentredInside(120).SubRectVertical(4, 1).GetVShifted(100), SplashClickActionFunc, "Choose Shape...", style))
+        const IRECT b = pGraphics->GetBounds();
+        pGraphics->AttachControl(new IBitmapControl(b.GetCentredInside(400,320), logo));
+        pGraphics->AttachControl(new IVSliderControl(b.GetCentredInside(80, 150).GetVShifted(220).GetHShifted(-165), kBank, " "))->SetAnimationEndActionFunction(bankchange);
+        pGraphics->AttachControl(new IVKnobControl(b.GetCentredInside(120, 80).GetVShifted(-240).GetHShifted(-140), kGainI));
+        pGraphics->AttachControl(new IVKnobControl(b.GetCentredInside(100, 80).GetVShifted(-240).GetHShifted(-45), kOffset));
+        pGraphics->AttachControl(new IVKnobControl(b.GetCentredInside(100, 80).GetVShifted(-240).GetHShifted(45), kFade));
+        pGraphics->AttachControl(new IVKnobControl(b.GetCentredInside(120, 80).GetVShifted(-240).GetHShifted(140), kGainO));
+        pGraphics->AttachControl(new IVKnobControl(b.GetCentredInside(100, 80).GetVShifted(230).GetHShifted(140), kRotation));
+        pGraphics->AttachControl(new IVSlideSwitchControl(b.GetCentredInside(70, 50).GetVShifted(230).GetHShifted(-80), kEnable));
+        pGraphics->AttachControl(new IVToggleControl(b.GetCentredInside(120, 50).GetVShifted(250).GetHShifted(35), kOptimize))->SetAnimationEndActionFunction(reload);
+        pGraphics->AttachControl(new IVButtonControl(b.GetCentredInside(120, 30).GetVShifted(200).GetHShifted(35), SplashClickActionFunc, "Choose Shape...", style))
           ->SetAnimationEndActionFunction(promptFunction);
     };
 #endif
@@ -78,97 +90,143 @@ void WavShaper::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
 
     for (int s = 0; s < nFrames; s++)
     {
-        sample samp = offset + (inputs[0][s] + inputs[1][s]) * gainI / 2;
-        if (samp == last)
+        if (targets.left.empty())
         {
-            multiplier = (multiplier > 0) ? (multiplier - 0.0006) : 0;
+            outputs[0][s] = 0;
+            outputs[1][s] = 0;
         }
         else
         {
-            multiplier = (multiplier < 1) ? (multiplier + 0.002) : 1;
-            last = samp;
+            sample samp = offset + (inputs[0][s] + inputs[1][s]) * gainI * 0.5;
+            if (samp == last)
+            {
+                multiplier = (multiplier > 0) ? (multiplier - 0.0006) : 0;
+            }
+            else
+            {
+                multiplier = (multiplier < 1) ? (multiplier + 0.002) : 1;
+                last = samp;
+            }
+            while (samp >= 1)
+                samp -= 2.;
+            while (samp < -1)
+                samp += 2.;
+            samp = samp / 1.00001;
+            sample sampL = doShaping(samp, true) * multiplier;
+            sampL = lerp<sample>(inputs[0][s], sampL, fade);
+            sample sampR = doShaping(samp, false) * multiplier;
+            sampR = lerp<sample>(inputs[1][s], sampR, fade);
+            outputs[0][s] = on ? (sampL * gainO) : inputs[0][s];
+            outputs[1][s] = on ? (sampR * gainO) : inputs[1][s];
         }
-        while (samp >= 1)
-            samp -= 2.;
-        while (samp < -1)
-            samp += 2.;
-        samp = samp / 1.00001;
-        sample sampL = doShaping(samp, true) * multiplier;
-        sampL = lerp<sample>(inputs[0][s], sampL, fade);
-        sample sampR = doShaping(samp, false) * multiplier;
-        sampR = lerp<sample>(inputs[1][s], sampR, fade);
-        outputs[0][s] = on ? (sampL * gainO) : inputs[0][s];
-        outputs[1][s] = on ? (sampR * gainO) : inputs[1][s];
     }
 }
 #endif
 
 sample WavShaper::doShaping(sample in, bool left)
 {
-    short int index = findInSampleSet(in) - 1;
+    int index = findInSampleSet(in) - 1 + (lastBank * MAX_SHAPE_SAMPLES);
     double t = (in + 1) - (index * SHAPE_SAMPLE_SCALE);
-    sample out = lerp<sample>((left ? tgt.samplesL[index] : tgt.samplesR[index]), (left ? tgt.samplesL[index + 1] : tgt.samplesR[index + 1]), t);
+    sample out = lerp<sample>(left ? (targets.left[index]) : (targets.right[index]), left ? (targets.left[index + 1]) : (targets.right[index + 1]), t);
     return out;
 }
 
-short int WavShaper::findInSampleSet(sample in)
+int WavShaper::findInSampleSet(sample in)
 {
-    short int i = 1 + (short int)((in + 1) * (HALF_SHAPE_SAMPLES - 1));
+    int i = 1 + (int)((in + 1) * (HALF_SHAPE_SAMPLES - 1));
     return i;
 }
 
 void WavShaper::loadShape(const char* name)
 {
-    fs::path path;
-    path = name;
+    fs::path path = name;
     copyToPluginDir(path);
-    tgt.name = path.filename().generic_string();
-    loadShape();
+    targets.name = path.filename().generic_string();
+    GetParam(kBank)->Set(0);
+    lastBank = 0;
+    loadShape(lastBank, true);
 }
 
-void WavShaper::loadShape()
-{
-    if (tgt.name != "__init__")
+void WavShaper::loadShape(int num, bool reinit) {
+    if (reinit || targets.init)
     {
-        AudioFile<sample> f;
-        char* p;
-        size_t len;
-        _dupenv_s(&p, &len, "APPDATA");
-        fs::path target = p;
-        target = target / "DJ_Level_3" / "WavShaper" / tgt.name;
-        try
+        targets.init = false;
+        if (targets.name != "((init))")
         {
-            f.load(target.generic_string());
-            int nSamps = f.getNumSamplesPerChannel();
-            for (int i = 0; i < MAX_SHAPE_SAMPLES && i < nSamps; i++)
+            targets.left.clear();
+            targets.right.clear();
+            AudioFile<sample> f;
+            char* p;
+            size_t len;
+            _dupenv_s(&p, &len, "APPDATA");
+            fs::path target = p;
+            target = target / "DJ_Level_3" / "WavShaper" / targets.name;
+            try
             {
-                tgt.samplesL[i] = f.samples[0][i];
-                tgt.samplesR[i] = f.samples[1][i];
+                f.load(target.generic_string());
+                int nSamps = (int)(f.getNumSamplesPerChannel() / MAX_SHAPE_SAMPLES) * MAX_SHAPE_SAMPLES;
+                for (int i = 0; i < nSamps; i++)
+                {
+                    targets.left.push_back(f.samples[0][i]);
+                    targets.right.push_back(f.samples[1][i]);
+                }
+                targets.nBanks = nSamps / MAX_SHAPE_SAMPLES;
+            }
+            catch (std::exception& e)
+            {
+                targets.left.clear();
+                targets.right.clear();
+                for (int i = 0; i < MAX_SHAPE_SAMPLES; i++)
+                {
+                    targets.left.push_back(0);
+                    targets.right.push_back(0);
+                }
+                targets.nBanks = 1;
             }
         }
-        catch (std::exception& e)
+        else
         {
-            for (int i = 0; i < MAX_SHAPE_SAMPLES; i++)
+            for (int i = 0; i < targets.left.size(); i++)
             {
-                tgt.samplesL[i] = 0;
-                tgt.samplesR[i] = 0;
+                targets.left[i] = 0;
+                targets.right[i] = 0;
             }
         }
     }
-    else
+    if (GetParam(kOptimize)->Value())
     {
-        for (int i = 0; i < MAX_SHAPE_SAMPLES; i++)
-        {
-            tgt.samplesL[i] = 0;
-            tgt.samplesR[i] = 0;
-        }
+        optimizeShape();
+    }
+    GetParam(kBank)->Set(num);
+}
+
+void WavShaper::optimizeShape()
+{
+    float scale = 0;
+    if (!targets.left.empty())
+    {
+        double maxX = *std::max_element(targets.left.begin(), targets.left.end());
+        double minX = *std::min_element(targets.left.begin(), targets.left.end());
+
+        double maxY = *std::max_element(targets.right.begin(), targets.right.end());
+        double minY = *std::min_element(targets.right.begin(), targets.right.end());
+
+        scale = (std::max(std::abs(std::max(maxX, maxY)), std::abs(std::min(minX, minY))));
+        scale = (scale == 0) ? (0.) : (1.0 / scale);
+    }
+    for (int i = 0; i < targets.left.size(); i++)
+    {
+        targets.left[i] = targets.left[i] * scale;
+        targets.right[i] = targets.right[i] * scale;
     }
 }
+
+void WavShaper::loadShape() { loadShape(lastBank, true); }
 
 bool WavShaper::SerializeState(IByteChunk& chunk) const
 {
     // serialize the multislider state state before serializing the regular params
-    chunk.PutStr(tgt.name.c_str());
+    chunk.PutStr(targets.name.c_str());
 
     return SerializeParams(chunk); // must remember to call SerializeParams at the end
 }
@@ -180,7 +238,7 @@ int WavShaper::UnserializeState(const IByteChunk& chunk, int startPos)
 
     // unserialize the steps state before unserializing the regular params
     startPos = chunk.GetStr(name, startPos);
-    tgt.name = std::string(name.Get());
+    targets.name = std::string(name.Get());
 
     // If UI exists
     updateUI();

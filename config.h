@@ -1,7 +1,7 @@
 #define PLUG_NAME "WavShaper"
 #define PLUG_MFR "DJ_Level_3"
-#define PLUG_VERSION_HEX 0x00000100
-#define PLUG_VERSION_STR "0.1.0"
+#define PLUG_VERSION_HEX 0x00000101
+#define PLUG_VERSION_STR "0.1.1"
 #define PLUG_UNIQUE_ID '985f'
 #define PLUG_MFR_ID 'DJL3'
 #define PLUG_URL_STR "https://djlevel3.github.io"
@@ -57,3 +57,5 @@
 #define ROBOTO_FN "Hack-Regular2.ttf"
 
 #define TRACETOSTDOUT
+
+#define WS_LOGO_FN "WavShaperLogo.png"

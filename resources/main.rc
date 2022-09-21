@@ -202,13 +202,13 @@ BEGIN
     BEGIN
         BLOCK "040004e4"
         BEGIN
-            VALUE "FileVersion", "0.0.1"
-            VALUE "ProductVersion", "0.0.1"
+            VALUE "FileVersion", "0.2.1"
+            VALUE "ProductVersion", "0.2.1"
             VALUE "FileDescription", "WavShaper"
             VALUE "InternalName", "WavShaper"
             VALUE "ProductName", "WavShaper"
             VALUE "CompanyName", "DJ_Level_3"
-            VALUE "LegalCopyright", "Copyright 2020 Acme Inc"
+            VALUE "LegalCopyright", "Copyright 2020 DJ_Level_3"
             VALUE "LegalTrademarks", "VST is a trademark of Steinberg Media Technologies GmbH, Audio Unit is a trademark of Apple, Inc."
         END
     END
@@ -231,6 +231,7 @@ END
 #include "..\config.h"
 HACK_FN TTF HACK_FN
 ROBOTO_FN TTF ROBOTO_FN
+WS_LOGO_FN PNG WS_LOGO_FN
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
