@@ -88,16 +88,17 @@ void WavShaper::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
     const bool on = GetParam(kEnable)->Value();
     const int nChans = NOutChansConnected();
 
-    for (int s = 0; s < nFrames; s++)
+    int sNum = 1;
+    while (sNum - 1 < nFrames)
     {
         if (targets.left.empty())
         {
-            outputs[0][s] = 0;
-            outputs[1][s] = 0;
+            outputs[0][sNum - 1] = 0;
+            outputs[1][sNum - 1] = 0;
         }
         else
         {
-            sample samp = offset + (inputs[0][s] + inputs[1][s]) * gainI * 0.5;
+            sample samp = offset + (inputs[0][sNum - 1] + inputs[1][sNum - 1]) * gainI * 0.5;
             if (samp == last)
             {
                 multiplier = (multiplier > 0) ? (multiplier - 0.0006) : 0;
@@ -112,22 +113,31 @@ void WavShaper::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
             while (samp < -1)
                 samp += 2.;
             samp = samp / 1.00001;
-            sample sampL = doShaping(samp, true) * multiplier;
-            sampL = lerp<sample>(inputs[0][s], sampL, fade);
-            sample sampR = doShaping(samp, false) * multiplier;
-            sampR = lerp<sample>(inputs[1][s], sampR, fade);
-            outputs[0][s] = on ? (sampL * gainO) : inputs[0][s];
-            outputs[1][s] = on ? (sampR * gainO) : inputs[1][s];
+            sample sampL = doShapingL(samp) * multiplier;
+            sampL = lerp<sample>(inputs[0][sNum - 1], sampL, fade);
+            sample sampR = doShapingR(samp) * multiplier;
+            sampR = lerp<sample>(inputs[1][sNum - 1], sampR, fade);
+            outputs[0][sNum - 1] = on ? (sampL * gainO) : inputs[0][sNum - 1];
+            outputs[1][sNum - 1] = on ? (sampR * gainO) : inputs[1][sNum - 1];
         }
+        sNum = sNum + 1;
     }
 }
 #endif
 
-sample WavShaper::doShaping(sample in, bool left)
+sample WavShaper::doShapingL(sample in)
 {
     int index = findInSampleSet(in) - 1 + (lastBank * MAX_SHAPE_SAMPLES);
     double t = (in + 1) - (index * SHAPE_SAMPLE_SCALE);
-    sample out = lerp<sample>(left ? (targets.left[index]) : (targets.right[index]), left ? (targets.left[index + 1]) : (targets.right[index + 1]), t);
+    sample out = lerp<sample>(targets.left[index], targets.left[index + 1], t);
+    return out;
+}
+
+sample WavShaper::doShapingR(sample in)
+{
+    int index = findInSampleSet(in) - 1 + (lastBank * MAX_SHAPE_SAMPLES);
+    double t = (in + 1) - (index * SHAPE_SAMPLE_SCALE);
+    sample out = lerp<sample>(targets.right[index], targets.right[index + 1], t);
     return out;
 }
 
@@ -226,6 +236,7 @@ void WavShaper::loadShape() { loadShape(lastBank, true); }
 bool WavShaper::SerializeState(IByteChunk& chunk) const
 {
     // serialize the multislider state state before serializing the regular params
+    chunk.PutStr(std::to_string(lastBank).c_str());
     chunk.PutStr(targets.name.c_str());
 
     return SerializeParams(chunk); // must remember to call SerializeParams at the end
@@ -235,10 +246,14 @@ bool WavShaper::SerializeState(IByteChunk& chunk) const
 int WavShaper::UnserializeState(const IByteChunk& chunk, int startPos)
 {
     WDL_String name;
+    WDL_String bank;
 
     // unserialize the steps state before unserializing the regular params
+    startPos = chunk.GetStr(bank, startPos);
     startPos = chunk.GetStr(name, startPos);
+    lastBank = std::stoi(bank.Get());
     targets.name = std::string(name.Get());
+    targets.init = true;
 
     // If UI exists
     updateUI();

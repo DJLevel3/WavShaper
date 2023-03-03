@@ -78,7 +78,8 @@ class WavShaper final : public Plugin
     sample last;
     int lastBank;
     shapeTargetV2 targets;
-    sample doShaping(sample in, bool left);
+    sample doShapingL(sample in);
+    sample doShapingR(sample in);
     int findInSampleSet(sample in);
     void updateUI();
     void loadShape(int num, bool reinit);
