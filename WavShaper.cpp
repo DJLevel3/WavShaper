@@ -85,6 +85,7 @@ void WavShaper::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
     const double gainO = GetParam(kGainO)->Value() / 100.;
     const double fade = GetParam(kFade)->Value() / 100;
     const double offset = GetParam(kOffset)->Value();
+    const double rotationRadians = GetParam(kRotation)->Value() * PI / -180;
     const bool on = GetParam(kEnable)->Value();
     const int nChans = NOutChansConnected();
 
@@ -101,7 +102,7 @@ void WavShaper::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
             sample samp = offset + (inputs[0][sNum - 1] + inputs[1][sNum - 1]) * gainI * 0.5;
             if (samp == last)
             {
-                multiplier = (multiplier > 0) ? (multiplier - 0.0006) : 0;
+                multiplier = (multiplier > 0) ? (multiplier - 0.0008) : 0;
             }
             else
             {
@@ -114,9 +115,14 @@ void WavShaper::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
                 samp += 2.;
             samp = samp / 1.00001;
             sample sampL = doShapingL(samp) * multiplier;
-            sampL = lerp<sample>(inputs[0][sNum - 1], sampL, fade);
             sample sampR = doShapingR(samp) * multiplier;
-            sampR = lerp<sample>(inputs[1][sNum - 1], sampR, fade);
+
+            sample sampLRotated = (sampL * std::cos(rotationRadians)) - (sampR * std::sin(rotationRadians));
+            sample sampRRotated = (sampL * std::sin(rotationRadians)) + (sampR * std::cos(rotationRadians));
+
+            sampL = lerp<sample>(inputs[0][sNum - 1], sampLRotated, fade);
+            sampR = lerp<sample>(inputs[1][sNum - 1], sampRRotated, fade);
+            
             outputs[0][sNum - 1] = on ? (sampL * gainO) : inputs[0][sNum - 1];
             outputs[1][sNum - 1] = on ? (sampR * gainO) : inputs[1][sNum - 1];
         }
