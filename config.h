@@ -1,12 +1,12 @@
 #define PLUG_NAME "WavShaper"
 #define PLUG_MFR "DJ_Level_3"
-#define PLUG_VERSION_HEX 0x00000101
-#define PLUG_VERSION_STR "0.1.1"
+#define PLUG_VERSION_HEX 0x00000110
+#define PLUG_VERSION_STR "0.1.2"
 #define PLUG_UNIQUE_ID '985f'
 #define PLUG_MFR_ID 'DJL3'
-#define PLUG_URL_STR "https://djlevel3.github.io"
+#define PLUG_URL_STR "https://github.com/DJLevel3/WavShaper"
 #define PLUG_EMAIL_STR "djlevel3gaming@gmail.com"
-#define PLUG_COPYRIGHT_STR "Copyright 2022 DJ_Level_3"
+#define PLUG_COPYRIGHT_STR "Copyright 2024 DJ_Level_3"
 #define PLUG_CLASS_NAME WavShaper
 
 #define BUNDLE_NAME "WavShaper"
